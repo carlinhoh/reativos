@@ -1,4 +1,4 @@
-# PROJETO:#
+**PROJETO:**
 
 Será criado um carro robô com sensores  **HC-SRO4**, seu sistema irá detectar objetos e irá desviar ou evitar obstáculos. O carro se movimentará sempre pra frente, caso não possa irá desviar para os lados.
 
