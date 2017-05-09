@@ -1,0 +1,34 @@
+#include "arduino/arduino.ceu"
+
+input  int PIN_02;
+output int PIN_13;
+
+{Serial.begin(9600);}
+
+loop do
+    par/or do
+        loop do
+            emit PIN_13(HIGH);
+            await 1s;
+            emit PIN_13(LOW);
+            await 1s;
+        end
+    with
+        var int on = await PIN_02 until on==HIGH;
+    end
+
+    emit PIN_13(HIGH);
+
+    loop do
+        var int fon = await PIN_02 until fon==HIGH;
+        par/or do
+            var int vlt = await PIN_02 until vlt==LOW;
+            //{Serial.println("DEU BOM!");}
+        with
+            //{Serial.println("VAI PARAR!");}
+            await 5s;
+            break;
+        end
+    end
+    //{Serial.println("VOLTOU!");}
+end
