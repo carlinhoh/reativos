@@ -1,0 +1,52 @@
+#include "arduino/arduino.ceu"
+
+input  int PIN_02;
+output int PIN_13;
+output int PIN_12;
+output int PIN_11;
+
+{Serial.begin(9600);}
+    par/or do
+        loop do
+	 //{Serial.println("FREQ 1 OK");
+            emit PIN_13(HIGH);
+            await 1s;
+        emit PIN_13(LOW);
+            await 1s;
+	end
+    with
+	loop do
+	 //{Serial.println("FREQ 2 OK");
+            emit PIN_12(HIGH);
+            await 500ms;
+        emit PIN_12(LOW);
+            await 500ms;
+	end
+    with
+	loop do
+	 //{Serial.println("FREQ 3 OK");
+            emit PIN_11(HIGH);
+            await 250ms;
+        emit PIN_11(LOW);
+            await 250ms;
+        end
+    with
+        loop do
+  		var int on = await PIN_02 until on==LOW;
+		//{Serial.println("BOT PRESS 1 OK");
+  		var int on = await PIN_02 until on==HIGH;
+		//{Serial.println("HERE");
+  		par/or do
+				//{Serial.println("BOT PRESS 2 OK");
+    			var int on = await PIN_02 until on==LOW;
+    			break;
+  		with
+				//{Serial.println("TESTE");
+    			await 500ms;
+  		end
+	end
+end
+emit PIN_13(LOW);
+emit PIN_12(LOW);
+emit PIN_11(LOW);
+await FOREVER;
