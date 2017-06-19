@@ -1,0 +1,137 @@
+#include "c.ceu"
+#include "sdl/sdl.ceu"
+
+#define PI 3.14
+
+var SDL_Color bg = val SDL_Color(0x00,0x00,0x00,0xFF);
+
+code/tight Intersects (var& SDL_Rect rct1, var& SDL_Rect rct2) -> bool
+do
+    escape rct1.x+rct1.w/2 >= rct2.x-rct2.w/2 and
+           rct1.x-rct1.w/2 <= rct2.x+rct2.w/2 and
+           rct1.y+rct1.h/2 >= rct2.y-rct2.h/2 and
+           rct1.y-rct1.h/2 <= rct2.y+rct2.h/2;
+end
+
+var&? SDL_Init sdl = spawn SDL_Init("Birds - 13 (pause)", 640,480, bg);
+watching sdl do
+    var& SDL_Open_Image img_up =
+        spawn SDL_Open_Image(&sdl!.ren, "res/clumsy_up.png");
+    var& SDL_Open_Image img_dn =
+        spawn SDL_Open_Image(&sdl!.ren, "res/clumsy_dn.png");
+    var& SDL_Open_Image img_pause =
+        spawn SDL_Open_Image(&sdl!.ren, "res/pause.png");
+
+    code/await Bird (var int y, var int speed)
+                        -> (var SDL_Rect rct, event void go_collided)
+                            -> void
+    do
+        rct = val SDL_Rect(20,y, 50,45);
+
+        event bool go_invisible;
+        var float sin = 0;
+        par/or do
+            var int out = _;
+            do/out
+                watching go_collided do
+                    var int yy = rct.y;
+                    var float x = rct.x;
+                    var int dt;
+                    every dt in SDL_DT do
+                        var float v = dt*speed;
+                        x = x + v/1000;
+                        rct.x = x as int;
+                        rct.y = yy + speed/5*_sin(sin);
+                        sin = sin + PI*v/100000;
+                        if rct.x > 580 then
+                            escape/out;
+                        end
+                    end
+                end
+
+                var float yy = rct.y;
+                var int dt;
+                every dt in SDL_DT do
+                    yy = yy + dt*0.5;
+                    rct.y = yy as int;
+                    if rct.y >= 400 then
+                        rct.y = 400;
+                        break;
+                    end
+                end
+
+                watching 1s do
+                    loop do
+                        emit go_invisible(true);
+                        await 100ms;
+                        emit go_invisible(false);
+                        await 100ms;
+                    end
+                end
+            end
+        with
+            pause/if go_invisible do
+                every SDL_REDRAW do
+                    if ((((sin+PI/2)/PI) as int) % 2) == 0 then
+                        _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_dn.tex.tex, null,
+                                        &&rct as _SDL_Rect&&);
+                    else
+                        _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_up.tex.tex, null,
+                                        &&rct as _SDL_Rect&&);
+                    end
+                end
+            end
+        end
+    end
+
+    event bool go_pause;
+    par do
+        pause/if go_pause do
+            loop do
+                watching SDL_MOUSEBUTTONDOWN do
+                    pool[] Bird birds;
+                    par do
+                        every 500ms do
+                            spawn Bird(20+_rand()%350, 100+_rand()%100) in birds;
+                        end
+                    with
+                        every SDL_DT do
+                            var&? Bird bird1;
+                            loop bird1 in birds do
+                                var&? Bird bird2;
+                                loop bird2 in birds do
+                                    if (&&bird1!.rct as usize)<(&&bird2!.rct as usize)
+                                        and (call Intersects(&bird1!.rct,&bird2!.rct))
+                                    then
+                                        emit bird1!.go_collided;
+                                        emit bird2!.go_collided;
+                                        break;
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    with
+        loop do
+            var _SDL_KeyboardEvent&& key1 = await SDL_KEYDOWN
+                                            until key1:keysym.sym==_SDLK_p;
+            emit go_pause(true);
+            par/or do
+                var SDL_Rect rct = val SDL_Rect(150,80,309,320);
+                every SDL_REDRAW do
+                    _SDL_RenderCopy(&&sdl!.ren, &&img_pause.tex, null,
+                                    &&rct as _SDL_Rect&&);
+                end
+            with
+                var _SDL_KeyboardEvent&& key2 = await SDL_KEYDOWN
+                                                until key2:keysym.sym==_SDLK_p;
+            end
+            emit go_pause(false);
+        end
+    end
+end
+
+escape 0;

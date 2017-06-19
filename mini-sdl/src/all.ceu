@@ -1,0 +1,72 @@
+#include "c.ceu"
+#include "sdl/sdl.ceu"
+
+#define MAX 14
+
+var int ex = 0;
+
+loop do
+    var int ex_ =
+    do
+        par do
+            if ex == 0 then
+                #include "birds-00.ceu"
+            else/if ex == 2 then
+                #include "birds-02.ceu"
+            else/if ex == 3 then
+                #include "birds-03.ceu"
+            else/if ex == 4 then
+                #include "birds-04.ceu"
+            else/if ex == 5 then
+                #include "birds-05.ceu"
+            else/if ex == 6 then
+                #include "birds-06.ceu"
+            else/if ex == 7 then
+                #include "birds-07.ceu"
+            else/if ex == 8 then
+                #include "birds-08.ceu"
+            else/if ex == 9 then
+                #include "birds-09.ceu"
+            else/if ex == 10 then
+                #include "birds-10.ceu"
+            else/if ex == 11 then
+                #include "birds-11.ceu"
+            else/if ex == 12 then
+                #include "birds-12.ceu"
+            else/if ex == 13 then
+                #include "birds-13.ceu"
+            else/if ex == 14 then
+                #include "birds-14.ceu"
+            end
+        with
+            loop do
+                var _SDL_KeyboardEvent&& key = await SDL_KEYDOWN;
+                if key:keysym.sym==_SDLK_r or key:keysym.sym==_SDLK_DOWN or
+                                              key:keysym.sym==_SDLK_UP then
+                    ex = ex;
+                    break;
+                //else/if key:keysym.sym==_SDLK_COMMA or key:keysym.sym==_SDLK_LEFT then
+                else/if key:keysym.sym==_SDLK_COMMA then
+                    ex = ex - 1;
+                    break;
+                //else/if key:keysym.sym==_SDLK_PERIOD or key:keysym.sym==_SDLK_RIGHT then
+                else/if key:keysym.sym==_SDLK_PERIOD then
+                    ex = ex + 1;
+                    break;
+                end
+            end
+            if ex < 1 then
+                ex = MAX;
+            else/if ex > MAX then
+                ex = 1;
+            end
+            escape ex;
+        end
+    end;
+    ex = ex_;
+    if ex == 0 then
+        break;
+    end
+end;
+
+escape 0;

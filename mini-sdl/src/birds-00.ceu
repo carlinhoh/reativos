@@ -1,0 +1,244 @@
+#include "c.ceu"
+#include "sdl/sdl.ceu"
+
+#define PI 3.14
+
+native _SDLK_SPACE;
+
+
+
+var SDL_Color bg = val SDL_Color(0xFF,0xFF,0xFF,0xFF);
+
+code/tight Intersects (var& SDL_Rect rct1, var& SDL_Rect rct2) -> bool
+do
+    escape rct1.x+rct1.w/2 >= rct2.x-rct2.w/2 and
+           rct1.x-rct1.w/2 <= rct2.x+rct2.w/2 and
+           rct1.y+rct1.h/2 >= rct2.y-rct2.h/2 and
+           rct1.y-rct1.h/2 <= rct2.y+rct2.h/2;
+end
+
+
+var&? SDL_Init sdl = spawn SDL_Init("Pegue o pombo", 640,480, bg);
+
+
+
+watching sdl do
+var& SDL_Open_Image back =
+        spawn SDL_Open_Image(&sdl!.ren, "res/1.jpg");
+
+var int score = 0;
+event void score_changed;
+
+
+var& SDL_Open_Font font = spawn SDL_Open_Font("res/Deutsch.ttf", 40);
+var& SDL_New_Text txt =
+        spawn SDL_New_Text(&sdl!.ren, &font.font, "Hello World!", SDL_Color(0x00,0x00,0x00,0xFF));
+var SDL_Rect rect = val SDL_Rect(10, 10, txt.tex.width, txt.tex.height);
+
+
+var& SDL_Open_Image img_up =
+        spawn SDL_Open_Image(&sdl!.ren, "res/unnamed.png");
+    var& SDL_Open_Image img_dn =
+        spawn SDL_Open_Image(&sdl!.ren, "res/clumsy_dn.png");
+var& SDL_Open_Image img_pote = 
+	spawn SDL_Open_Image(&sdl!.ren, "res/cesto.png");
+
+    code/await Bird (var int y, var int speed)
+                        -> (var SDL_Rect rct, event void go_collided)
+                            -> void
+    do
+        rct = val SDL_Rect(20,y, 50,45);
+
+
+        var float sin = 0;
+        par/or do
+            var int out = _;
+            do/out
+                watching (500 + _rand()%2500)ms do
+                    var int yy = rct.y;
+                    var float x = rct.x;
+                    var int dt;
+                    every dt in SDL_DT do
+                        var float v = dt*speed;
+                        x = x + v/1000;
+                        rct.x = x as int;
+                        rct.y = yy + speed/5*_sin(sin);
+                        sin = sin + PI*v/100000;
+                        if rct.x > 580 then
+                            escape/out;
+                        end
+                    end
+                end
+
+                var float yy = rct.y;
+                var int dt;
+                every dt in SDL_DT do
+                    yy = yy + dt*0.5;
+                    rct.y = yy as int;
+                    if rct.y >= 400 then
+                        rct.y = 400;
+                        break;
+                    end
+                end
+            end
+        with
+            every SDL_REDRAW do
+		
+                if ((((sin+PI/2)/PI) as int) % 2) == 0 then
+                    _SDL_RenderCopy(&&outer.sdl!.ren,  &&outer.img_up.tex.tex, null,
+                                    &&rct as _SDL_Rect&&);
+                else
+                    _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_up.tex.tex, null,
+                                    &&rct as _SDL_Rect&&);
+                end
+            end
+        end
+    end
+	
+	code/await Backg (void) -> (var SDL_Rect rct) -> FOREVER do
+		rct = val SDL_Rect(0,0, 640,480);
+		loop do
+		 every SDL_REDRAW do
+			     _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.back.tex.tex, null,
+		                        &&rct as _SDL_Rect&&);
+			end
+		end
+	end
+
+
+    code/await Cloud (var SDL_Rect r, var float vx) 	
+	-> FOREVER do
+        var float x = -r.w;
+        par do
+            var int dt;
+            every dt in SDL_DT do
+                x = x + vx*dt/1000;
+                if x > 640 then
+                    x = -r.w;
+                end
+            end
+        with
+            every SDL_REDRAW do
+                _SDL_SetRenderDrawColor(&&outer.sdl!.ren, 0xDD,0xDD,0xDD,0xFF);
+                r.x = x as int;
+                _SDL_RenderFillRect(&&outer.sdl!.ren, (&&r as _SDL_Rect&&));
+            end
+        end
+    end
+
+    code/await Player (void)
+	 -> (var SDL_Rect r)	
+ -> FOREVER do
+
+
+        var float x = 640/2 - 20/2;
+        var float y = 480-50;
+        var float vx = 0;
+        var float vy = 0;
+
+        r = val SDL_Rect(100,100, 100,100);
+		//var SDL_Rect tiro = val SDL_Rect(r.x,r.y+50, 10,10);
+
+        par do
+            var int dt;
+            every dt in SDL_DT do
+                x = x + vx*dt/1000;
+                y = y + vy*dt/1000;
+            end
+        with
+            par do
+                loop do
+                    var _SDL_KeyboardEvent&& key;
+                    key = await SDL_KEYDOWN until key:keysym.sym==_SDLK_LEFT;
+                    vx = -200;
+                    key = await SDL_KEYUP   until key:keysym.sym==_SDLK_LEFT;
+                    vx = 0;
+                end
+            with
+                loop do
+                    var _SDL_KeyboardEvent&& key;
+                    key = await SDL_KEYDOWN until key:keysym.sym==_SDLK_RIGHT;
+                    vx = 200;
+                    key = await SDL_KEYUP   until key:keysym.sym==_SDLK_RIGHT;
+                    vx = 0;
+                end
+		
+            end
+        with
+	    loop do
+		vector[50] byte text;
+		_sprintf(&&text[0], "%d", outer.score);
+                var& SDL_New_Text txt =
+        	    spawn SDL_New_Text(&outer.sdl!.ren, &outer.font.font, &&text[0], SDL_Color(0x00,0x00,0x00,0xFF));
+    		var SDL_Rect rect = val SDL_Rect(10, 10, txt.tex.width, txt.tex.height);
+
+		watching outer.score_changed do
+            	    every SDL_REDRAW do
+			 r.x = x as int;
+                r.y = y as int;
+                _SDL_RenderCopy(&&outer.sdl!.ren,  &&outer.img_pote.tex.tex, null,
+                                    &&r as _SDL_Rect&&);
+		        _SDL_RenderCopy(&&outer.sdl!.ren, &&txt.tex.tex, null, &&rect as _SDL_Rect&&);
+		    end
+                end
+            end
+        end
+    end
+
+    native/pre do
+        ##include <time.h>
+    end
+    _srand(_time(null));
+
+    pool[3] Cloud clouds;
+	spawn Backg();
+
+    var int i;
+
+    loop i in [1 -> 3] do
+        var int w = 50 + _rand()%200;
+        var int h = 20 + _rand()%50;
+        var int y = h + _rand()%200;
+        spawn Cloud(SDL_Rect(0,y,w,h), 10+_rand()%50) in clouds;
+    end
+	var&? Player player = spawn Player();
+	loop do
+        watching SDL_MOUSEBUTTONDOWN do
+            pool[] Bird birds;
+            par do
+                every 700ms do
+                    spawn Bird(20+_rand()%350, 100+_rand()%100) in birds;
+                end
+            with
+                every SDL_DT do
+                    var&? Bird bird1;
+		var&? Player p;
+			
+                    loop bird1 in birds do
+			//loop p in player do
+
+
+                            if (call Intersects(&bird1!.rct, &player!.r))
+                            then
+                                score = score +1;
+				kill bird1;
+				emit score_changed;
+                                break;
+                            end
+			//end
+
+                    end
+                end
+	    with
+	
+	    end
+	    
+        end
+    end
+    
+
+
+    await FOREVER;
+end
+
+escape 0;

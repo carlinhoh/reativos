@@ -1,0 +1,54 @@
+#include "c.ceu"
+#include "sdl/sdl.ceu"
+
+#define PI 3.14
+
+var SDL_Color bg = val SDL_Color(0x00,0x00,0x00,0xFF);
+
+var&? SDL_Init sdl = spawn SDL_Init("Birds - 03 (pool)", 640,480, bg);
+watching sdl do
+    var& SDL_Open_Image img_up =
+        spawn SDL_Open_Image(&sdl!.ren, "res/clumsy_up.png");
+    var& SDL_Open_Image img_dn =
+        spawn SDL_Open_Image(&sdl!.ren, "res/clumsy_dn.png");
+
+    code/await Bird (var int y, var int speed) -> FOREVER
+    do
+        var SDL_Rect rct = val SDL_Rect(20,y, 50,45);
+
+        var float sin = 0;
+        par do
+            var int yy = rct.y;
+            var float x = rct.x;
+            var int dt;
+            every dt in SDL_DT do
+                var float v = dt*speed;
+                x = x + v/1000;
+                rct.x = x as int;
+                rct.y = yy + speed/5*_sin(sin);
+                sin = sin + PI*v/100000;
+            end
+        with
+            every SDL_REDRAW do
+                if ((((sin+PI/2)/PI) as int) % 2) == 0 then
+                    _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_dn.tex.tex, null,
+                                    &&rct as _SDL_Rect&&);
+                else
+                    _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_up.tex.tex, null,
+                                    &&rct as _SDL_Rect&&);
+                end
+            end
+        end
+    end
+
+    pool[5] Bird birds;
+
+    var int i;
+    loop i in [1 -> 5] do
+        spawn Bird(70*i, 100 + 10*i) in birds;
+    end
+
+    await FOREVER;
+end
+
+escape 0;
