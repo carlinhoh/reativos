@@ -182,6 +182,7 @@ code/await Sound(void) ->FOREVER do
 
     native/pre do
         ##include <time.h>
+		##include <math.h>
     end
     _srand(_time(null));
 	spawn Sound();
